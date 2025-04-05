@@ -1,1 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Processor</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        form { margin-top: 20px; }
+        input[type="file"] { margin: 10px; }
+        .downloads { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Upload Attendance Excel File</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx" required>
+        <br>
+        <input type="submit" value="Process">
+    </form>
+
+    {% if download_ready %}
+    <div class="downloads">
+        <h3>Download Results:</h3>
+        <a href="{{ url_for('download_file', filename='processed_attendance.xlsx') }}">Processed Attendance</a><br>
+        <a href="{{ url_for('download_file', filename='attendance_summary.xlsx') }}">Attendance Summary</a>
+    </div>
+    {% elif message %}
+        <p>{{ message }}</p>
+    {% endif %}
+</body>
+</html>
 
