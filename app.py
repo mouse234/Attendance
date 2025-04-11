@@ -5,6 +5,26 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+def convert_dat_to_excel(dat_file):
+    import pandas as pd
+    from io import BytesIO
+
+    column_names = ['User ID', 'Timestamp', 'Col3', 'Col4', 'Col5', 'Col6']
+    df = pd.read_csv(dat_file, delimiter='\t', header=None, names=column_names)
+
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+    df = df.dropna(subset=['Timestamp'])  # Remove rows with invalid timestamp
+    df['Name'] = ''  # Add a blank name column
+
+    df = df[['User ID', 'Timestamp', 'Name', 'Col3', 'Col4', 'Col5', 'Col6']]
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Raw Attendance')
+    output.seek(0)
+    return output
+
+
 
 def process_attendance_data(excel_file):
     # Create a mapping from User ID to Name (if available)
@@ -105,8 +125,11 @@ user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[[
 def upload():
     if request.method == 'POST':
         file = request.files['file']
-        if not file.filename.endswith('.xlsx'):
-            return 'Invalid file format. Please upload an .xlsx file.'
+        if file.filename.endswith('.dat'):
+            excel_file = convert_dat_to_excel(file)
+             file = excel_file  # now use the Excel-compatible version
+        elif not file.filename.endswith('.xlsx'):
+            return 'Invalid file format. Please upload a .xlsx or .dat file.'
 
         processed_data, summary_data = process_attendance_data(file)
         if processed_data is None:
