@@ -26,7 +26,7 @@ def convert_dat_to_excel(dat_file):
 
 
 
-def process_attendance_data(excel_file):
+def process_attendance_data(excel_file, user_name_map=None):
     # Create a mapping from User ID to Name (if available)
 user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[['User ID', 'Name']].set_index('User ID')['Name'].to_dict()
 
@@ -48,6 +48,10 @@ user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[[
     df['Day'] = df['Timestamp'].dt.day_name()
     df = df.sort_values(['User ID', 'Timestamp'])
     grouped = df.groupby(['User ID', 'Date'])
+
+    if user_name_map is None:
+    user_name_map = {}
+
 
     result = pd.DataFrame(columns=[
         'Serial No', 'User ID', 'Name', 'Date', 'Day', 'In Time', 'Out Time',
@@ -131,7 +135,20 @@ def upload():
         elif not file.filename.endswith('.xlsx'):
             return 'Invalid file format. Please upload a .xlsx or .dat file.'
 
-        processed_data, summary_data = process_attendance_data(file)
+
+    # Load name mapping if provided
+    name_map_file = request.files.get('name_map')
+    user_name_map = {}
+
+        if name_map_file and name_map_file.filename.endswith('.xlsx'):
+            name_df = pd.read_excel(name_map_file)
+            if 'User ID' in name_df.columns and 'Name' in name_df.columns:
+                user_name_map = name_df.dropna(subset=['User ID', 'Name']) \
+                               .drop_duplicates(subset=['User ID']) \
+                               .set_index('User ID')['Name'].to_dict()
+
+
+        processed_data, summary_data = process_attendance_data(file, user_name_map)
         if processed_data is None:
             return "No data found for previous month."
 
@@ -146,7 +163,10 @@ def upload():
     return '''
         <h1>Upload Attendance Excel File</h1>
         <form method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".xlsx">
+            <p>Upload Attendance File (.xlsx or .dat):</p>
+            <input type="file" name="file" accept=".xlsx,.dat">
+            <p>Upload Name Mapping File (.xlsx):</p>
+            <input type="file" name="name_map" accept=".xlsx">
             <input type="submit">
         </form>
     '''
