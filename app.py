@@ -28,7 +28,7 @@ def convert_dat_to_excel(dat_file):
 
 def process_attendance_data(excel_file, user_name_map=None):
     # Create a mapping from User ID to Name (if available)
-user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[['User ID', 'Name']].set_index('User ID')['Name'].to_dict()
+    user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[['User ID', 'Name']].set_index('User ID')['Name'].to_dict()
 
     df = pd.read_excel(excel_file)
 
@@ -50,7 +50,7 @@ user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[[
     grouped = df.groupby(['User ID', 'Date'])
 
     if user_name_map is None:
-    user_name_map = {}
+      user_name_map = {}
 
 
     result = pd.DataFrame(columns=[
@@ -93,7 +93,7 @@ user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[[
 
         day_name = in_time.strftime('%A')
 
-       result.loc[len(result)] = [
+        result.loc[len(result)] = [
     serial_no, user_id, user_name_map.get(user_id, ''), date, day_name,
 
             in_time.time(), out_time.time(), round(working_hours, 2),
@@ -131,7 +131,7 @@ def upload():
         file = request.files['file']
         if file.filename.endswith('.dat'):
             excel_file = convert_dat_to_excel(file)
-             file = excel_file  # now use the Excel-compatible version
+            file = excel_file  # now use the Excel-compatible version
         elif not file.filename.endswith('.xlsx'):
             return 'Invalid file format. Please upload a .xlsx or .dat file.'
 
@@ -140,10 +140,10 @@ def upload():
     name_map_file = request.files.get('name_map')
     user_name_map = {}
 
-        if name_map_file and name_map_file.filename.endswith('.xlsx'):
-            name_df = pd.read_excel(name_map_file)
-            if 'User ID' in name_df.columns and 'Name' in name_df.columns:
-                user_name_map = name_df.dropna(subset=['User ID', 'Name']) \
+    if name_map_file and name_map_file.filename.endswith('.xlsx'):
+      name_df = pd.read_excel(name_map_file)
+      if 'User ID' in name_df.columns and 'Name' in name_df.columns:
+        user_name_map = name_df.dropna(subset=['User ID', 'Name']) \
                                .drop_duplicates(subset=['User ID']) \
                                .set_index('User ID')['Name'].to_dict()
 
