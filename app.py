@@ -7,6 +7,9 @@ app = Flask(__name__)
 
 
 def process_attendance_data(excel_file):
+    # Create a mapping from User ID to Name (if available)
+user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[['User ID', 'Name']].set_index('User ID')['Name'].to_dict()
+
     df = pd.read_excel(excel_file)
 
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
@@ -66,8 +69,9 @@ def process_attendance_data(excel_file):
 
         day_name = in_time.strftime('%A')
 
-        result.loc[len(result)] = [
-            serial_no, user_id, '', date, day_name,
+       result.loc[len(result)] = [
+    serial_no, user_id, user_name_map.get(user_id, ''), date, day_name,
+
             in_time.time(), out_time.time(), round(working_hours, 2),
             status, short_leave, remarks
         ]
@@ -89,7 +93,7 @@ def process_attendance_data(excel_file):
             summary_remark = "Has incomplete attendance records (single entries)"
 
         summary.loc[len(summary)] = [
-            summary_serial_no, user_id, '', float(full_days), float(half_days),
+            summary_serial_no, user_id, user_name_map.get(user_id, ''), float(full_days), float(half_days),
             float(short_leaves), float(total_working_days), summary_remark
         ]
         summary_serial_no += 1
