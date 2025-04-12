@@ -6,9 +6,6 @@ from datetime import datetime
 app = Flask(__name__)
 
 def convert_dat_to_excel(dat_file):
-    import pandas as pd
-    from io import BytesIO
-
     column_names = ['User ID', 'Timestamp', 'Col3', 'Col4', 'Col5', 'Col6']
     df = pd.read_csv(dat_file, delimiter='\t', header=None, names=column_names)
 
@@ -24,12 +21,7 @@ def convert_dat_to_excel(dat_file):
     output.seek(0)
     return output
 
-
-
-def process_attendance_data(excel_file, user_name_map=None):
-    # Create a mapping from User ID to Name (if available)
-    user_name_map = df.dropna(subset=['Name']).drop_duplicates(subset=['User ID'])[['User ID', 'Name']].set_index('User ID')['Name'].to_dict()
-
+def process_attendance_data(excel_file, user_name_map):
     df = pd.read_excel(excel_file)
 
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
@@ -48,10 +40,6 @@ def process_attendance_data(excel_file, user_name_map=None):
     df['Day'] = df['Timestamp'].dt.day_name()
     df = df.sort_values(['User ID', 'Timestamp'])
     grouped = df.groupby(['User ID', 'Date'])
-
-    if user_name_map is None:
-      user_name_map = {}
-
 
     result = pd.DataFrame(columns=[
         'Serial No', 'User ID', 'Name', 'Date', 'Day', 'In Time', 'Out Time',
@@ -94,8 +82,7 @@ def process_attendance_data(excel_file, user_name_map=None):
         day_name = in_time.strftime('%A')
 
         result.loc[len(result)] = [
-    serial_no, user_id, user_name_map.get(user_id, ''), date, day_name,
-
+            serial_no, user_id, user_name_map.get(user_id, ''), date, day_name,
             in_time.time(), out_time.time(), round(working_hours, 2),
             status, short_leave, remarks
         ]
@@ -124,29 +111,24 @@ def process_attendance_data(excel_file, user_name_map=None):
 
     return result, summary
 
-
 @app.route('/', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
         file = request.files['file']
         if file.filename.endswith('.dat'):
             excel_file = convert_dat_to_excel(file)
-            file = excel_file  # now use the Excel-compatible version
+            file = excel_file
         elif not file.filename.endswith('.xlsx'):
             return 'Invalid file format. Please upload a .xlsx or .dat file.'
 
-
-    # Load name mapping if provided
-    name_map_file = request.files.get('name_map')
-    user_name_map = {}
-
-    if name_map_file and name_map_file.filename.endswith('.xlsx'):
-      name_df = pd.read_excel(name_map_file)
-      if 'User ID' in name_df.columns and 'Name' in name_df.columns:
-        user_name_map = name_df.dropna(subset=['User ID', 'Name']) \
-                               .drop_duplicates(subset=['User ID']) \
-                               .set_index('User ID')['Name'].to_dict()
-
+        # Load built-in user database
+        try:
+            user_db = pd.read_csv('user_database.csv')
+            user_name_map = user_db.dropna(subset=['User ID', 'Name']) \
+                                   .drop_duplicates(subset=['User ID']) \
+                                   .set_index('User ID')['Name'].to_dict()
+        except Exception as e:
+            return f"Error loading user database: {str(e)}"
 
         processed_data, summary_data = process_attendance_data(file, user_name_map)
         if processed_data is None:
@@ -161,16 +143,13 @@ def upload():
         return send_file(output, as_attachment=True, download_name='attendance_report.xlsx')
 
     return '''
-        <h1>Upload Attendance Excel File</h1>
+        <h1>Upload Attendance Excel or .dat File</h1>
         <form method="post" enctype="multipart/form-data">
             <p>Upload Attendance File (.xlsx or .dat):</p>
             <input type="file" name="file" accept=".xlsx,.dat">
-            <p>Upload Name Mapping File (.xlsx):</p>
-            <input type="file" name="name_map" accept=".xlsx">
             <input type="submit">
         </form>
     '''
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=10000)
