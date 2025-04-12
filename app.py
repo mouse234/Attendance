@@ -71,7 +71,7 @@ def process_attendance_data(excel_file, user_name_map):
         in_time_obj = in_time.time()
         out_time_obj = out_time.time()
 
-        condition1 = (datetime.strptime('10:46', '%H:%M').time() <= in_time_obj <= datetime.strptime('11:40', '%H:%M').time() and
+        condition1 = (datetime.strptime('10:46', '%H:%M').time() <= in_time_obj <= datetime.strptime('11:59', '%H:%M').time() and
                       out_time_obj >= datetime.strptime('19:00', '%H:%M').time())
         condition2 = (datetime.strptime('10:20', '%H:%M').time() <= in_time_obj <= datetime.strptime('10:46', '%H:%M').time() and
                       datetime.strptime('18:00', '%H:%M').time() <= out_time_obj <= datetime.strptime('18:30', '%H:%M').time())
