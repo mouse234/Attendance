@@ -62,7 +62,7 @@ def process_attendance_data(excel_file, user_name_map):
 
         if working_hours < 4:
             status = 'Leave'
-        elif 4 <= working_hours < 7:
+        elif 4 <= working_hours < 7.5:
             status = 'Half Day'
         else:
             status = 'Full Day'
