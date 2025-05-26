@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, render_template, jsonify
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
@@ -10,8 +10,8 @@ def convert_dat_to_excel(dat_file):
     df = pd.read_csv(dat_file, delimiter='\t', header=None, names=column_names)
 
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
-    df = df.dropna(subset=['Timestamp'])  # Remove rows with invalid timestamp
-    df['Name'] = ''  # Add a blank name column
+    df = df.dropna(subset=['Timestamp'])
+    df['Name'] = ''
 
     df = df[['User ID', 'Timestamp', 'Name', 'Col3', 'Col4', 'Col5', 'Col6']]
 
@@ -33,7 +33,7 @@ def process_attendance_data(excel_file, user_name_map):
             (df['Timestamp'].dt.year == previous_year)]
 
     if df.empty:
-        return None, None
+        return None, None, None, None
 
     df['Date'] = df['Timestamp'].dt.date
     df['Time'] = df['Timestamp'].dt.time
@@ -109,47 +109,52 @@ def process_attendance_data(excel_file, user_name_map):
         ]
         summary_serial_no += 1
 
-    return result, summary
+    return result, summary, previous_month, previous_year
 
-@app.route('/', methods=['GET', 'POST'])
-def upload():
-    if request.method == 'POST':
-        file = request.files['file']
-        if file.filename.endswith('.dat'):
-            excel_file = convert_dat_to_excel(file)
-            file = excel_file
-        elif not file.filename.endswith('.xlsx'):
-            return 'Invalid file format. Please upload a .xlsx or .dat file.'
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
-        # Load built-in user database
-        try:
-            user_db = pd.read_csv('user_database.csv')
-            user_name_map = user_db.dropna(subset=['User ID', 'Name']) \
-                                   .drop_duplicates(subset=['User ID']) \
-                                   .set_index('User ID')['Name'].to_dict()
-        except Exception as e:
-            return f"Error loading user database: {str(e)}"
+@app.route('/process', methods=['POST'])
+def process():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'})
+    
+    file = request.files['file']
+    if file.filename.endswith('.dat'):
+        excel_file = convert_dat_to_excel(file)
+        file = excel_file
+    elif not file.filename.endswith('.xlsx'):
+        return jsonify({'error': 'Invalid file format'})
 
-        processed_data, summary_data = process_attendance_data(file, user_name_map)
-        if processed_data is None:
-            return "No data found for previous month."
+    try:
+        user_db = pd.read_csv('user_database.csv')
+        user_name_map = user_db.dropna(subset=['User ID', 'Name']) \
+                               .drop_duplicates(subset=['User ID']) \
+                               .set_index('User ID')['Name'].to_dict()
+    except Exception as e:
+        return jsonify({'error': f"Error loading user database: {str(e)}"})
 
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            processed_data.to_excel(writer, index=False, sheet_name='Processed Attendance')
-            summary_data.to_excel(writer, index=False, sheet_name='Summary')
+    processed_data, summary_data, month, year = process_attendance_data(file, user_name_map)
+    if processed_data is None:
+        return jsonify({'error': "No data found for previous month"})
 
-        output.seek(0)
-        return send_file(output, as_attachment=True, download_name='attendance_report.xlsx')
+    summary_list = summary_data.to_dict('records')
+    return render_template('summary.html', 
+                         summary=summary_list,
+                         month=month,
+                         year=year)
 
-    return '''
-        <h1>Upload Attendance Excel or .dat File</h1>
-        <form method="post" enctype="multipart/form-data">
-            <p>Upload Attendance File (.xlsx or .dat):</p>
-            <input type="file" name="file" accept=".xlsx,.dat">
-            <input type="submit">
-        </form>
-    '''
+@app.route('/salary-slip/<user_id>')
+def salary_slip(user_id):
+    try:
+        user_db = pd.read_csv('user_database.csv')
+        user = user_db[user_db['User ID'] == int(user_id)].iloc[0]
+        return render_template('salary_slip.html', 
+                             user_id=user_id,
+                             name=user['Name'])
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=10000)
