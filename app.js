@@ -80,7 +80,7 @@ function processAttendanceSummary(data, userNameMap) {
 }
 
 app.get('/', (req, res) => {
-    res.render('index');
+    res.render('index.ejs');
 });
 
 app.post('/process', async (req, res) => {
@@ -116,7 +116,7 @@ app.post('/process', async (req, res) => {
             return res.status(404).json({ error: 'No data found for previous month' });
         }
 
-        res.render('summary', {
+        res.render('summary.ejs', {
             summary: summaryData,
             month,
             year
@@ -139,7 +139,7 @@ app.get('/salary-slip/:userId', (req, res) => {
             throw new Error('User not found');
         }
 
-        res.render('salary_slip', {
+        res.render('salary_slip.ejs', {
             user_id: req.params.userId,
             name: user.Name
         });
