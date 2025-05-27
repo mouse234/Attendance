@@ -12,8 +12,6 @@ const app = express();
 app.use(express.static('public'));
 app.use(fileUpload());
 app.set('view engine', 'ejs');
-
-// Convert templates to EJS
 app.set('views', path.join(__dirname, 'views'));
 
 function convertDatToExcel(datContent) {
@@ -47,19 +45,16 @@ function processAttendanceData(excelData, userNameMap) {
         return [null, null, previousMonth + 1, previousYear];
     }
 
-    // Process attendance similar to Python version
     const summary = processAttendanceSummary(filteredData, userNameMap);
     
     return [filteredData, summary, previousMonth + 1, previousYear];
 }
 
 function processAttendanceSummary(data, userNameMap) {
-    // Group by user and date
     const groupedData = data.reduce((acc, row) => {
         const userId = row['User ID'];
         if (!acc[userId]) acc[userId] = { fullDays: 0, halfDays: 0, shortLeaves: 0 };
         
-        // Calculate attendance metrics
         const timestamp = new Date(row.Timestamp);
         const hours = timestamp.getHours();
         
@@ -102,7 +97,8 @@ app.post('/process', async (req, res) => {
 
         const userDb = parse(fs.readFileSync('user_database.csv'), {
             columns: true,
-            skip_empty_lines: true
+            skip_empty_lines: true,
+            trim: true
         });
 
         const userNameMap = userDb.reduce((acc, row) => {
@@ -130,7 +126,8 @@ app.get('/salary-slip/:userId', (req, res) => {
     try {
         const userDb = parse(fs.readFileSync('user_database.csv'), {
             columns: true,
-            skip_empty_lines: true
+            skip_empty_lines: true,
+            trim: true
         });
 
         const user = userDb.find(row => row['User ID'] === req.params.userId);
