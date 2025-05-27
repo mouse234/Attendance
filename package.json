@@ -2,9 +2,17 @@
   "name": "attendance-processor",
   "version": "1.0.0",
   "description": "Smart Attendance Processor with Salary Slip Generator",
-  "main": "app.py",
+  "main": "app.js",
+  "type": "module",
   "scripts": {
-    "start": "python app.py",
-    "build": "python app.py"
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.3",
+    "xlsx": "^0.18.5",
+    "csv-parse": "^5.5.3",
+    "ejs": "^3.1.9"
   }
 }

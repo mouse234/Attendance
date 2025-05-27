@@ -1,14 +1,11 @@
-# Use an official Python runtime
-FROM python:3.10-slim
+FROM node:18-slim
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container
+COPY package*.json ./
+
+RUN npm install
+
 COPY . .
 
-# Install dependencies using pip3
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Run the script
-CMD ["python", "app.py"]
+CMD ["node", "app.js"]
