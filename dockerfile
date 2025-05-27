@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy the current directory contents into the container
 COPY . .
 
-# Install dependencies
+# Install dependencies using pip3
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Run the script
