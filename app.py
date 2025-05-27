@@ -1,9 +1,15 @@
-from flask import Flask, request, send_file, render_template, jsonify
+from fastapi import FastAPI, Request, Response, File, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+import uvicorn
 
-app = Flask(__name__)
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def convert_dat_to_excel(dat_file):
     column_names = ['User ID', 'Timestamp', 'Col3', 'Col4', 'Col5', 'Col6']
@@ -111,50 +117,56 @@ def process_attendance_data(excel_file, user_name_map):
 
     return result, summary, previous_month, previous_year
 
-@app.route('/', methods=['GET'])
-def index():
-    return render_template('index.html')
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.route('/process', methods=['POST'])
-def process():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'})
-    
-    file = request.files['file']
-    if file.filename.endswith('.dat'):
-        excel_file = convert_dat_to_excel(file)
-        file = excel_file
-    elif not file.filename.endswith('.xlsx'):
-        return jsonify({'error': 'Invalid file format'})
-
+@app.post("/process")
+async def process(request: Request, file: UploadFile = File(...)):
     try:
-        user_db = pd.read_csv('user_database.csv')
-        user_name_map = user_db.dropna(subset=['User ID', 'Name']) \
-                               .drop_duplicates(subset=['User ID']) \
-                               .set_index('User ID')['Name'].to_dict()
+        content = await file.read()
+        if file.filename.endswith('.dat'):
+            excel_file = convert_dat_to_excel(BytesIO(content))
+            file_content = excel_file
+        elif not file.filename.endswith('.xlsx'):
+            return JSONResponse(content={'error': 'Invalid file format'})
+        else:
+            file_content = BytesIO(content)
+
+        try:
+            user_db = pd.read_csv('user_database.csv')
+            user_name_map = user_db.dropna(subset=['User ID', 'Name']) \
+                                .drop_duplicates(subset=['User ID']) \
+                                .set_index('User ID')['Name'].to_dict()
+        except Exception as e:
+            return JSONResponse(content={'error': f"Error loading user database: {str(e)}"})
+
+        processed_data, summary_data, month, year = process_attendance_data(file_content, user_name_map)
+        if processed_data is None:
+            return JSONResponse(content={'error': "No data found for previous month"})
+
+        summary_list = summary_data.to_dict('records')
+        return templates.TemplateResponse("summary.html", {
+            "request": request,
+            "summary": summary_list,
+            "month": month,
+            "year": year
+        })
     except Exception as e:
-        return jsonify({'error': f"Error loading user database: {str(e)}"})
+        return JSONResponse(content={'error': str(e)})
 
-    processed_data, summary_data, month, year = process_attendance_data(file, user_name_map)
-    if processed_data is None:
-        return jsonify({'error': "No data found for previous month"})
-
-    summary_list = summary_data.to_dict('records')
-    return render_template('summary.html', 
-                         summary=summary_list,
-                         month=month,
-                         year=year)
-
-@app.route('/salary-slip/<user_id>')
-def salary_slip(user_id):
+@app.get("/salary-slip/{user_id}")
+async def salary_slip(request: Request, user_id: str):
     try:
         user_db = pd.read_csv('user_database.csv')
         user = user_db[user_db['User ID'] == int(user_id)].iloc[0]
-        return render_template('salary_slip.html', 
-                             user_id=user_id,
-                             name=user['Name'])
+        return templates.TemplateResponse("salary_slip.html", {
+            "request": request,
+            "user_id": user_id,
+            "name": user['Name']
+        })
     except Exception as e:
         return f"Error: {str(e)}"
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)

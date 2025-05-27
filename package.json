@@ -6,5 +6,12 @@
   "scripts": {
     "start": "python app.py",
     "build": "python app.py"
+  },
+  "dependencies": {
+    "fastapi": "^0.109.0",
+    "pandas": "^2.1.0",
+    "openpyxl": "^3.1.2",
+    "uvicorn": "^0.27.0",
+    "python-multipart": "^0.0.9"
   }
 }
