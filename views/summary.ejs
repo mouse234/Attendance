@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Summary</title>
+</head>
+<body>
+    <h1>Attendance Summary for <%= month %>/<%= year %></h1>
+    <table border="1">
+        <tr>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Full Days</th>
+            <th>Half Days</th>
+            <th>Short Leaves</th>
+            <th>Total Working Days</th>
+            <th>Action</th>
+        </tr>
+        <% summary.forEach(function(row) { %>
+        <tr>
+            <td><%= row['User ID'] %></td>
+            <td><%= row['Name'] %></td>
+            <td><%= row['Full Days'] %></td>
+            <td><%= row['Half Days'] %></td>
+            <td><%= row['Short Leaves'] %></td>
+            <td><%= row['Total Working Days'] %></td>
+            <td><a href="/salary-slip/<%= row['User ID'] %>">View Salary Slip</a></td>
+        </tr>
+        <% }); %>
+    </table>
+</body>
+</html>

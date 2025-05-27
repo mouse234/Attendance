@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Processing</title>
+</head>
+<body>
+    <h1>Upload Attendance File</h1>
+    <form action="/process" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".dat,.xlsx" required>
+        <button type="submit">Process</button>
+    </form>
+</body>
+</html>
